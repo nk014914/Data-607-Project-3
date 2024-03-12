@@ -1,0 +1,236 @@
+---
+title: "Data 607 Project 3"
+author: "Natalie Kalukeerthie, Anna Moy, Bishoy Sokkar"
+date: "2024-03-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Introduction
+
+## Which are the most valued data science skills? 
+
+Our team collaborated together to find data that supports the skills that are needed for data science. There were a few datasets we explored and we felt the Data Science Job Postings & skills had a lot of good data for us to analyze and tidy up. Our team was able to collaborate effectively through Slack, Google doc, and Zoom. We were able to share our code in Github. 
+
+The dataset we used is from  [Kaggle - Data Science Job Postings & Skills (2024)](https://www.kaggle.com/datasets/asaniczka/data-science-job-postings-and-skills) which contains jobs and the job skills that are needed for those roles. 
+
+Our approach for this project was to analyze the data and determine the job skills needed for data science and break it down by different countries and seniority. First step we had to take was combine the three dataset into one and then breakdown the job skills into individual observations. 
+
+We came up with a few questions we wanted to answer based on the data obtained. 
+
+* What skills are the most common for data scientist?
+
+* What skills are needed for data scientist at different countries?
+
+* What skills are needed for data scientist depending on their level of seniority?
+
+
+### Load libraries
+```{r load-library, message = FALSE}
+# load in the library
+library(tidyverse)
+library(lubridate)
+library(wordcloud)
+```
+
+### Combine all three dataset in one csv file before loading
+
+```{r read-csv-file, message = FALSE}
+# read the one file with all different dataset combined
+all_data <- read_csv("https://raw.githubusercontent.com/AnnaMoy/Data-607-Project-3/main/job_postings_combine.csv")
+```
+
+### Tidy up the data
+```{r last_processed_time}
+# separate out the last processed time into date and time
+# break out processed time from date and time
+all_data <- all_data %>%
+  mutate(last_processed_time = lubridate::ymd_hms(last_processed_time),
+         last_process_date = lubridate::date(last_processed_time),
+         last_processed_time = hms::as_hms(last_processed_time))
+```
+
+```{r separate-job-skills}
+# separate job skills into one column
+all_data <- separate_rows(all_data, job_skills, sep = ",")
+```
+
+```{r grouping_of_title}
+# added groups to be able to analyze the different roles and see if there is a difference in job skills
+all_data$group_title= ifelse(grepl("*data engineer*", all_data$job_title, ignore.case= TRUE), "data engineer",
+                        ifelse(grepl("*data scientist*", all_data$job_title, ignore.case= TRUE), "data scientist",
+                        ifelse(grepl("*data architect*", all_data$job_title, ignore.case= TRUE), "data architect",
+                        ifelse(grepl("*machine learning*", all_data$job_title, ignore.case= TRUE), "machine learning",      
+                        ifelse(grepl("*mlops engineer*", all_data$job_title, ignore.case= TRUE), "machine learning",                                 ifelse(grepl("*database administrator*", all_data$job_title, ignore.case= TRUE), "database administrator",
+                        ifelse(grepl("*database engineer*", all_data$job_title, ignore.case= TRUE), "database engineer",
+                        ifelse(grepl("*data science*", all_data$job_title, ignore.case= TRUE), "data science",
+                        ifelse(grepl("*data analyst*", all_data$job_title, ignore.case = TRUE), "data analyst", "other")))))))))
+
+```
+
+### Analysis
+
+## What skills are the most common for data scientist?
+  
+```{r filter-data-scientist, echo = FALSE}
+# filter out data scientist job titles and the top 10 job skills
+data_scientist <- all_data %>%
+  filter(grepl("data scientist",job_title, ignore.case = TRUE)) %>%
+  group_by(job_skills) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10)
+
+#Plot of the top 10 job skills data scientist
+ggplot(data_scientist, aes(x = reorder(job_skills, n), n, fill = job_skills)) +
+  geom_bar(stat="identity", position = "dodge") +
+  coord_flip() +
+  labs(title = "Top 10 Data Scientist Skills Needed") +
+  xlab("Job Skills") +
+  ylab("# of counts")
+```
+
+## What skills do data scientist need in different countries?
+``` {r filter by location,figures-side, fig.show="hold", out.width="50%", echo = FALSE}
+# filter out data scientist job titles and top 10 job skills in United States
+data_countryUS <- all_data %>%
+  filter(grepl("data scientist",job_title, ignore.case = TRUE), search_country == "United States") %>%
+  group_by(search_country,job_skills) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10)
+
+ggplot(data_countryUS, aes(x = reorder(job_skills, n), n, fill = job_skills)) +
+  geom_bar(stat="identity", position = "dodge") +
+  coord_flip() +
+  labs(title = "Top 10 Data Scientist Skills in the United States") +
+  xlab("Job Skills") +
+  ylab("# of counts")
+
+# filter out data scientist job titles and top 10 job skills in Australia
+data_countryAUS <- all_data %>%
+  filter(grepl("data scientist",job_title, ignore.case = TRUE), search_country == "Australia") %>%
+  group_by(search_country,job_skills) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10)
+
+ggplot(data_countryAUS, aes(x = reorder(job_skills, n), n, fill = job_skills)) +
+  geom_bar(stat="identity", position = "dodge") +
+  coord_flip() +
+  labs(title = "Top 10 Data Scientist Skills in Australia") +
+  xlab("Job Skills") +
+  ylab("# of counts")
+```
+```{r Canada,figures-side, fig.show="hold", out.width="50%", echo= FALSE}
+# filter out data scientist job titles and top 10 job skills in Canada
+data_countryCA <- all_data %>%
+  filter(grepl("data scientist",job_title, ignore.case = TRUE), search_country == "Canada") %>%
+  group_by(search_country,job_skills) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10)
+
+ggplot(data_countryCA, aes(x = reorder(job_skills, n), n, fill = job_skills)) +
+  geom_bar(stat="identity", position = "dodge") +
+  coord_flip() +
+  labs(title = "Top 10 Data Scientist Skills in Canada") +
+  xlab("Job Skills") +
+  ylab("# of counts")
+
+# filter out data scientist job titles and top 10 job skills in United Kingdom
+data_countryUK <- all_data %>%
+  filter(grepl("data scientist",job_title, ignore.case = TRUE), search_country == "United Kingdom") %>%
+  group_by(search_country,job_skills) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(10)
+
+ggplot(data_countryUK, aes(x = reorder(job_skills, n), n, fill = job_skills)) +
+  geom_bar(stat="identity", position = "dodge") +
+  coord_flip() +
+  labs(title = "Top 10 Data Scientist Skills in United Kingdom") +
+  xlab("Job Skills") +
+  ylab("# of counts")
+```
+
+Group job titles into a bucket and determine the most common skills they need to have
+```{r group_title, message = FALSE}
+job_grouping <- all_data %>%
+  group_by(group_title) %>%
+  count(job_skills) %>%
+  filter(n > 500, group_title == "data engineer") %>%
+  arrange(group_title, desc(n)) %>%
+  head(5)
+
+ggplot(job_grouping, aes(x = reorder(job_skills,n),n,job_skills, fill = job_skills)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Data Engineer Job Skills Needed") +
+   xlab("Job Skills") +
+   ylab("# of counts")
+
+job_grouping_data <- all_data %>%
+  group_by(group_title) %>%
+  count(job_skills) %>%
+  filter(n > 500, group_title == "data analyst") %>%
+  arrange(group_title, desc(n)) %>%
+  head(5)
+
+ggplot(job_grouping_data, aes(x = reorder(job_skills,n),n,job_skills, fill = job_skills)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Data Analyst Job Skills Needed") +
+   xlab("Job Skills") +
+   ylab("# of counts")
+
+job_grouping_ml <- all_data %>%
+  group_by(group_title) %>%
+  count(job_skills) %>%
+  filter(n > 100, group_title == "machine learning") %>%
+  arrange(group_title, desc(n)) %>%
+  head(5)
+
+ggplot(job_grouping_ml, aes(x = reorder(job_skills,n),n,job_skills, fill = job_skills)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Data Engineer Job Skills Needed") +
+   xlab("Job Skills") +
+   ylab("# of counts")
+```
+
+## What are the skills for data scientist depending on their seniority level?
+
+```{r seniority_level}
+seniority_assoc <- all_data %>%
+  filter(job_level == "Associate") %>%
+  select(job_level, job_skills) %>%
+  count(job_skills)%>%
+  arrange(desc(n)) %>%
+  head(10)
+
+seniority_mid <- all_data %>%
+  filter(job_level == "Mid senior") %>%
+  select(job_level, job_skills) %>%
+  count(job_skills)%>%
+  arrange(desc(n)) %>%
+  head(10)
+
+seniority_assoc
+seniority_mid
+```
+
+## Top 30 job skills 
+
+```{r wordcloud, echo = FALSE, message = FALSE}
+word_counts <- all_data %>%
+  count(job_skills) %>%
+  arrange(desc(n)) %>%
+  head(30)
+
+wordcloud(
+  words = word_counts$job_skills,
+  freq = word_counts$n,
+  max.words = 30,
+  colors = "blue")
+```
