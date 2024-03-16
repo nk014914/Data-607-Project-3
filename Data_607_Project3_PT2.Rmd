@@ -1,8 +1,11 @@
 ---
-title: "Data 607 Project 3"
+title: "Data 607 - Project 3: Data Science Skills"
 author: "Natalie Kalukeerthie, Anna Moy, Bishoy Sokkar"
 date: "2024-03-17"
-output: html_document
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -34,8 +37,103 @@ We came up with a few questions we wanted to answer based on the data obtained.
 library(tidyverse)
 library(lubridate)
 library(wordcloud)
+library(RMySQL)
 ```
 
+### Importing Data through MySQL Database
+
+The first approach was to load multiple CSV files into MySQL, for a total of four tables: country, job_level, job_postings, and job_skills.
+
+```{r import_sql_database}
+#importing country table 
+mysqlconnection = dbConnect(RMySQL::MySQL(),
+                            dbname= 'natalie.kalukeerthie02',
+                            host= 'cunydata607sql.mysql.database.azure.com',
+                            port=3306,
+                            user='natalie.kalukeerthie02',
+                            password='natalie.kalukeerthie02')
+                            
+result = dbSendQuery(mysqlconnection, "select * from country")
+
+country <- fetch(result)
+
+print(country)
+
+#importing job_level table
+mysqlconnection = dbConnect(RMySQL::MySQL(),
+                            dbname= 'natalie.kalukeerthie02',
+                            host= 'cunydata607sql.mysql.database.azure.com',
+                            port=3306,
+                            user='natalie.kalukeerthie02',
+                            password='natalie.kalukeerthie02')
+                            
+result = dbSendQuery(mysqlconnection, "select * from job_level")
+
+job_level <- fetch(result)
+
+print(job_level)
+```
+
+The uploading and importing both the job_level and country tables was successful, mainly because the tables were small. When it came to both job_postings and  job_skills, this proved to be a bit more difficult.
+
+Due to the size of each dataset (around 12.1K rows), the files could not be imported through MySQL Workbench's Import Data Wizard Tool and could only be uploaded into a local database. 
+
+This would be done using the LOAD DATA INFILE query. In order to use the query, the data set must be imported into an empty table that matches in number of columns and column data types.The TEXT function was used for columns that need an unlimited character length. VARCHAR(n) was used for columns needing only a specific character length.
+
+```{r Creating_SQL_tables, eval=FALSE}
+#Create SQL table for job_postings
+create table job_postings (
+	job_link TEXT,
+  last_processed_time VARCHAR(50),
+  last_status VARCHAR(20),
+  got_summary VARCHAR(1),
+	got_ner VARCHAR(1),
+  is_being_worked VARCHAR(1),
+  job_title VARCHAR(200),
+  company VARCHAR(100),
+	job_location VARCHAR(100),
+	first_seen date,
+	search_city VARCHAR(100),
+	id_country VARCHAR(1),
+	search_position VARCHAR(100),
+	id_level VARCHAR(2),
+  job_type VARCHAR(10)
+);
+
+#Create table for job_skills
+create table job_skills (
+	job_link TEXT,
+  last_processed_time TEXT,
+);
+
+```
+
+Next, the data set is uploaded using LOAD DATA INFILE:
+
+```{r load_data_infile,  eval=FALSE}
+LOAD DATA INFILE 'C:\Program Files\MySQL\MySQL Server 8.0\job_postings_revised.csv' INTO TABLE job_postings
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\r\n'
+IGNORE 1 ROWS
+```
+
+Our group faced a few errors (show below) when attempting to load the datasets in, mainly these errors revolved around MySQL Workbench's security protocols set in place over the last few years, which require granting certain permissions:
+
+Error Code: 1290. The MySQL server is running with the --secure-file-priv option so it cannot execute this statement
+
+This was resolved adding LOCAL into the LOAD DATA INFILE query:
+```{r load_data_infile,  eval=FALSE}
+LOAD DATA INFILE 'C:\Program Files\MySQL\MySQL Server 8.0\job_postings_revised.csv' INTO TABLE job_postings
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\r\n'
+IGNORE 1 ROWS
+```
+
+Error Code: 3948. Loading local data is disabled; this must be enabled on both the client and server sides
+
+This error requires enabling permissions via multiple sources and will need further exploration. 
+
+Due to the issues issues face, we decided to take the approach of using a combined CSV file:
 ### Combine all three dataset in one csv file before loading
 
 ```{r read-csv-file, message = FALSE}
